@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "agent-templates": {
+      "command": "node",
+      "args": ["mcp/agent-templates.js"]
+    },
+    "codex-bridge": {
+      "command": "node",
+      "args": ["mcp/codex-bridge.js"]
+    }
+  }
+}
