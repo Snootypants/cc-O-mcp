@@ -80,3 +80,4 @@ file contents here
 - **Staging**: Files go to `.staging/<id>/`, never directly to repo
 - **QC**: Reads from staging, runs checks, emits PASS/FAIL
 - **Apply**: Only CC(O) applies staged files and commits
+- **Finish**: After QC PASS, run the `finish-and-commit` command to apply changes and commit

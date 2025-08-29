@@ -14,7 +14,11 @@ function stripAnsi(str) {
 // Check if codex binary exists on PATH
 function checkCodexExists() {
   try {
-    execSync('which codex', { stdio: 'ignore' });
+    if (process.platform === "win32") {
+      execSync("where codex", { stdio: "ignore" });
+    } else {
+      execSync("command -v codex", { stdio: "ignore" });
+    }
     return true;
   } catch {
     return false;
@@ -24,52 +28,26 @@ function checkCodexExists() {
 // Parse file blocks from output
 function parseFileBlocks(output) {
   const blocks = [];
-  const lines = output.split('\n');
-  let i = 0;
+  const seen = new Set(); // Deduplicate paths
   
-  while (i < lines.length) {
-    const line = lines[i];
-    // Look for path pattern: starts with / and has file extension
-    if (line.startsWith('/') && line.match(/\.\w+$/)) {
-      const path = line.trim();
-      let content = [];
-      i++;
+  // Match files with either ``` or --- fences, allow files without extensions
+  const patterns = [
+    /^\/[^\n]+?\s*\n```[^\n]*\n([\s\S]*?)\n```/gm,  // triple backticks
+    /^\/[^\n]+?\s*\n---\n([\s\S]*?)\n---/gm         // triple dashes
+  ];
+  
+  for (const re of patterns) {
+    let m;
+    while ((m = re.exec(output)) !== null) {
+      const headerEnd = output.indexOf("\n", m.index);
+      const path = output.slice(m.index, headerEnd).trim();
+      const content = m[1].replace(/\r\n/g, "\n");
       
-      // Skip separator lines like ---
-      while (i < lines.length && lines[i].match(/^-+$/)) {
-        i++;
+      // Deduplicate based on path
+      if (!seen.has(path)) {
+        seen.add(path);
+        blocks.push({ path, content });
       }
-      
-      // Collect content until we hit another path or triple backticks
-      let inFence = false;
-      while (i < lines.length) {
-        const currentLine = lines[i];
-        if (currentLine.startsWith('```')) {
-          if (!inFence) {
-            inFence = true;
-            i++;
-            continue;
-          } else {
-            // End of this block
-            i++;
-            break;
-          }
-        }
-        if (!inFence && currentLine.startsWith('/') && currentLine.match(/\.\w+$/)) {
-          // Start of next file block
-          break;
-        }
-        if (inFence || (!currentLine.startsWith('/') || !currentLine.match(/\.\w+$/))) {
-          content.push(currentLine);
-        }
-        i++;
-      }
-      
-      if (content.length > 0) {
-        blocks.push({ path, content: content.join('\n') });
-      }
-    } else {
-      i++;
     }
   }
   
